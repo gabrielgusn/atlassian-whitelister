@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,6 +9,9 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/oracle/oci-go-sdk/v65/common"
+	"github.com/oracle/oci-go-sdk/v65/identity"
 )
 
 type IpListItem struct {
@@ -32,7 +36,31 @@ var client = &http.Client{
 }
 
 func main() {
+	c, err := identity.NewIdentityClientWithConfigurationProvider(common.DefaultConfigProvider())
 
+	if err != nil {
+		log.Println("Error while creating OCI Identity:", err)
+		return
+	}
+
+	tenancyId, err := common.DefaultConfigProvider().TenancyOCID()
+	if err != nil {
+		log.Println("Error while gettint Tenancy OCID:", err)
+		return
+	}
+
+	request := identity.ListAvailabilityDomainsRequest{
+		CompartmentId: &tenancyId,
+	}
+
+	r, err := c.ListAvailabilityDomains(context.Background(), request)
+	if err != nil {
+		log.Println("Error while requesting available ADs:", err)
+		return
+	}
+	fmt.Printf("List of available domains: %v", r.Items)
+
+	fmt.Println(tenancyId)
 	// Probably https://ip-ranges.atlassian.com/
 	atlassian_ipranges_url := os.Getenv("ATLASSIAN_IPRANGES_URL")
 
@@ -68,7 +96,7 @@ func main() {
 
 	// fmt.Print(ipList)
 
-	ipList.listBitbucketIps()
+	// ipList.listBitbucketIps()
 }
 
 func (i *IpList) listBitbucketIps() (data []string, err any) {
